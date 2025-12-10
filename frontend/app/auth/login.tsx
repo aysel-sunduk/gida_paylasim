@@ -51,20 +51,22 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
-      showsVerticalScrollIndicator={true}
-      keyboardShouldPersistTaps="handled"
-      bounces={true}
-      nestedScrollEnabled={false}
-      scrollEventThrottle={16}
-      alwaysBounceVertical={false}
-    >
-      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        nestedScrollEnabled={false}
+        scrollEventThrottle={16}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        scrollEnabled={true}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <ThemedText style={styles.logo}>🍽️</ThemedText>
+          <ThemedText style={styles.logo}>🍽️</ThemedText>
           </View>
           <ThemedText type="title" style={styles.title}>
             Gıda Paylaşım
@@ -146,8 +148,8 @@ export default function LoginScreen() {
           <ThemedText style={styles.testValue}>Email: test@example.com</ThemedText>
           <ThemedText style={styles.testValue}>Şifre: test123</ThemedText>
         </View>
-      </ThemedView>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
@@ -178,15 +180,24 @@ function CustomCheckbox({
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingBottom: 20,
+    flexGrow: 1,
+    paddingHorizontal: 16,
   },
   container: {
-    paddingHorizontal: 16,
+    flex: 1,
   },
   header: {
     alignItems: 'center',
     marginBottom: 32,
     paddingVertical: 24,
+  },
+  backRow: {
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    color: '#4CAF50',
+    fontWeight: '700',
   },
   logoContainer: {
     width: 100,

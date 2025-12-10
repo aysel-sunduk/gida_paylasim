@@ -1,14 +1,11 @@
-// import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import apiClient from './api-client';
 
-// const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-// const apiClient = axios.create({
-//   baseURL: API_BASE_URL,
-//   timeout: 10000,
-//   headers: {
-//     'Content-Type': 'application/json',
-//   },
-// });
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  status?: number;
+}
 
 export interface DonationCreate {
   title: string;
@@ -18,185 +15,99 @@ export interface DonationCreate {
   longitude: number;
   quantity?: string;
   expiration_date?: string;
+  is_for_animals?: boolean;
+  is_reserved?: boolean;
+  is_collected?: boolean;
 }
 
 export interface Donation extends DonationCreate {
   id: number;
   created_at: string;
-  status: string;
+  updated_at?: string;
+  is_reserved?: boolean;
+  is_collected?: boolean;
+  is_for_animals?: boolean;
 }
 
-export interface ApiResponse<T> {
-  data: T;
-  message: string;
-  status: number;
-}
-
-// Mock veri - GEÇICI TEST VERİSİ
-const MOCK_DONATIONS: Donation[] = [
-  {
-    id: 1,
-    title: 'Günlük Ekmek',
-    description: 'Taze ve sağlıklı günlük ekmek',
-    category: 'Gıda',
-    quantity: '10 adet',
-    latitude: 41.0082,
-    longitude: 28.9784,
-    created_at: '2024-12-09',
-    status: 'aktif',
+export const ENDPOINTS = {
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    ME: '/auth/me',
   },
-  {
-    id: 2,
-    title: 'Kış Ceketi',
-    description: 'Giyilmiş kış ceketi, iyi durumda',
-    category: 'Giyim',
-    latitude: 41.0150,
-    longitude: 28.9750,
-    created_at: '2024-12-08',
-    status: 'aktif',
+  DONATIONS: {
+    ROOT: '/donations',
+    BY_ID: (id: number) => `/donations/${id}`,
+    SEARCH: '/donations/search',
   },
-  {
-    id: 3,
-    title: 'Türkçe Romanı',
-    description: 'Ödüllü Türk yazarın romanı',
-    category: 'Kitap',
-    latitude: 41.0050,
-    longitude: 28.9850,
-    created_at: '2024-12-07',
-    status: 'aktif',
-  },
-  {
-    id: 4,
-    title: 'Sandalye',
-    description: 'Ahşap sandalye, sağlam ve temiz',
-    category: 'Ev Eşyası',
-    latitude: 41.0200,
-    longitude: 28.9600,
-    created_at: '2024-12-06',
-    status: 'aktif',
-  },
-  {
-    id: 5,
-    title: 'Çay Seti',
-    description: 'Porselenli, 6 kişilik çay seti',
-    category: 'Ev Eşyası',
-    latitude: 41.0100,
-    longitude: 28.9900,
-    created_at: '2024-12-05',
-    status: 'aktif',
-  },
-];
+};
 
-// Bağışları Listele (MOCK)
-export async function getDonations(): Promise<Donation[]> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.get<ApiResponse<Donation[]>>('/donations');
-  // return response.data.data;
-
-  // Şimdilik mock veri döndür
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(MOCK_DONATIONS);
-    }, 500); // 500ms gecikme ekle (gerçek API gibi hisset)
-  });
+async function authHeaders() {
+  const token = await AsyncStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Belirli Bağış Detayları (MOCK)
-export async function getDonationById(id: number): Promise<Donation> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.get<ApiResponse<Donation>>(`/donations/${id}`);
-  // return response.data.data;
-
-  return new Promise((resolve, reject) => {
-    const donation = MOCK_DONATIONS.find(d => d.id === id);
-    if (donation) {
-      setTimeout(() => resolve(donation), 300);
-    } else {
-      reject(new Error('Bağış bulunamadı'));
-    }
-  });
+// -------- AUTH --------
+export async function apiLogin(payload: { email: string; password: string }) {
+  const res = await apiClient.post(ENDPOINTS.AUTH.LOGIN, payload);
+  return res.data;
 }
 
-// Yeni Bağış Oluştur (MOCK)
-export async function createDonation(donation: DonationCreate): Promise<Donation> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.post<ApiResponse<Donation>>('/donations', donation);
-  // return response.data.data;
-
-  return new Promise((resolve) => {
-    const newDonation: Donation = {
-      ...donation,
-      id: Math.max(...MOCK_DONATIONS.map(d => d.id), 0) + 1,
-      created_at: new Date().toISOString().split('T')[0],
-      status: 'aktif',
-    };
-    MOCK_DONATIONS.push(newDonation);
-    setTimeout(() => resolve(newDonation), 500);
-  });
+export async function apiRegister(payload: {
+  full_name: string;
+  email: string;
+  password: string;
+  phone_number: string;
+  user_type: 'donor' | 'recipient' | 'shelter_volunteer';
+}) {
+  const res = await apiClient.post(ENDPOINTS.AUTH.REGISTER, payload);
+  return res.data;
 }
 
-// Bağış Güncelle (MOCK)
-export async function updateDonation(id: number, donationUpdate: Partial<DonationCreate>): Promise<Donation> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.put<ApiResponse<Donation>>(`/donations/${id}`, donationUpdate);
-  // return response.data.data;
-
-  return new Promise((resolve, reject) => {
-    const index = MOCK_DONATIONS.findIndex(d => d.id === id);
-    if (index !== -1) {
-      MOCK_DONATIONS[index] = { ...MOCK_DONATIONS[index], ...donationUpdate };
-      setTimeout(() => resolve(MOCK_DONATIONS[index]), 300);
-    } else {
-      reject(new Error('Bağış bulunamadı'));
-    }
+export async function apiMe(token: string) {
+  const res = await apiClient.get(ENDPOINTS.AUTH.ME, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  return res.data;
 }
 
-// Bağış Sil (MOCK)
-export async function deleteDonation(id: number): Promise<void> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // await apiClient.delete(`/donations/${id}`);
-
-  return new Promise((resolve, reject) => {
-    const index = MOCK_DONATIONS.findIndex(d => d.id === id);
-    if (index !== -1) {
-      MOCK_DONATIONS.splice(index, 1);
-      setTimeout(() => resolve(), 300);
-    } else {
-      reject(new Error('Bağış bulunamadı'));
-    }
-  });
+// -------- DONATIONS --------
+export async function getDonations(params?: {
+  category?: string;
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
+}) {
+  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.ROOT, { params });
+  return res.data?.data || res.data;
 }
 
-// Konuma Göre Bağışları Filtrele (MOCK)
-export async function getDonationsByLocation(
-  latitude: number,
-  longitude: number,
-  radiusKm: number = 10
-): Promise<Donation[]> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.get<ApiResponse<Donation[]>>('/donations/search', {
-  //   params: { latitude, longitude, radius_km: radiusKm },
-  // });
-  // return response.data.data;
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(MOCK_DONATIONS); // Basit versiyon, filtreleme yapabilirsin
-    }, 400);
-  });
+export async function getDonationById(id: number) {
+  const res = await apiClient.get<ApiResponse<Donation>>(ENDPOINTS.DONATIONS.BY_ID(id));
+  return res.data?.data || res.data;
 }
 
-// Kategori Bazlı Filtrele (MOCK)
-export async function getDonationsByCategory(category: string): Promise<Donation[]> {
-  // Gerçek API çağrısı (backend hazır olunca):
-  // const response = await apiClient.get<ApiResponse<Donation[]>>('/donations/category', {
-  //   params: { category },
-  // });
-  // return response.data.data;
+export async function createDonation(payload: DonationCreate) {
+  const headers = await authHeaders();
+  const res = await apiClient.post<ApiResponse<Donation>>(ENDPOINTS.DONATIONS.ROOT, payload, { headers });
+  return res.data?.data || res.data;
+}
 
-  return new Promise((resolve) => {
-    const filtered = MOCK_DONATIONS.filter(d => d.category === category);
-    setTimeout(() => resolve(filtered), 300);
+export async function updateDonation(id: number, payload: Partial<DonationCreate>) {
+  const headers = await authHeaders();
+  const res = await apiClient.patch<ApiResponse<Donation>>(ENDPOINTS.DONATIONS.BY_ID(id), payload, { headers });
+  return res.data?.data || res.data;
+}
+
+export async function deleteDonation(id: number) {
+  const headers = await authHeaders();
+  const res = await apiClient.delete<ApiResponse<void>>(ENDPOINTS.DONATIONS.BY_ID(id), { headers });
+  return res.data;
+}
+
+export async function getDonationsByLocation(latitude: number, longitude: number, radiusKm: number = 10) {
+  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.SEARCH, {
+    params: { latitude, longitude, radius_km: radiusKm },
   });
+  return res.data?.data || res.data;
 }

@@ -2,6 +2,7 @@ import { Donation, DonationCard } from '@/components/donation-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { useAuth } from '@/contexts/auth-context';
 import { getDonations } from '@/services/api-service';
 import { calculateDistance, getCurrentLocation, LocationCoords } from '@/utils/location-service';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [displayedDonations, setDisplayedDonations] = useState<Donation[]>([]);
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
@@ -164,7 +166,7 @@ export default function HomeScreen() {
           </MapView>
 
           <PrimaryButton
-            title="📋 Listemi Göster"
+            title="📋 Bağış Listemi Göster"
             onPress={() => setShowMap(false)}
             style={styles.toggleButton}
           />
@@ -182,6 +184,11 @@ export default function HomeScreen() {
             onPress={() => setShowMap(true)}
             style={styles.toggleButton}
           />
+          {user?.user_type === 'donor' && (
+            <ThemedText style={styles.infoBanner}>
+              📢 Sadece Bağışçı rolünde bağış ekleyebilirsiniz.
+            </ThemedText>
+          )}
 
           {donations.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -251,6 +258,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
     fontSize: 16,
+  },
+  infoBanner: {
+    marginTop: 8,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#f0f7ed',
+    color: '#2e7d32',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,

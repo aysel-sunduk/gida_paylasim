@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Types
 export interface User {
   id: number;
   full_name: string;
@@ -30,19 +29,7 @@ export interface LoginData {
   password: string;
 }
 
-// Mock veriler (Backend hazır olunca kaldırılacak)
-const MOCK_USERS: { [key: string]: RegisterData & { password: string; id: number } } = {
-  'test@example.com': {
-    id: 1,
-    full_name: 'Test Kullanıcı',
-    email: 'test@example.com',
-    password: 'test123',
-    phone_number: '+905551234567',
-    user_type: 'donor',
-  },
-};
-
-let NEXT_USER_ID = 2;
+import { apiLogin, apiMe, apiRegister } from './api-service';
 
 // Token ve kullanıcı verilerini localStorage'a kaydet
 export async function saveAuthToken(token: string, user: User, rememberMe: boolean) {
@@ -103,149 +90,30 @@ export async function logout() {
   }
 }
 
-// KAYIT API ÇAĞRISI
+// KAYIT API ÇAĞRISI (gerçek endpoint)
 export async function registerUser(data: RegisterData): Promise<AuthResponse> {
-  // Gerçek API çağrısı (Backend hazır olunca):
-  // const response = await axios.post('/auth/register', data);
-  // return response.data;
-
-  // Mock veri
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Email zaten var mı kontrol et
-      if (MOCK_USERS[data.email]) {
-        reject({
-          status: 'error',
-          message: 'Bu email zaten kayıtlı',
-          code: 'EMAIL_ALREADY_EXISTS',
-        });
-        return;
-      }
-
-      // Yeni kullanıcı oluştur
-      const newUser: User = {
-        id: NEXT_USER_ID++,
-        full_name: data.full_name,
-        email: data.email,
-        phone_number: data.phone_number,
-        user_type: data.user_type,
-        created_at: new Date().toISOString(),
-      };
-
-      // Mock storage'a ekle
-      MOCK_USERS[data.email] = { ...data, id: newUser.id };
-
-      const mockToken = `token_${newUser.id}_${Date.now()}`;
-
-      resolve({
-        status: 'success',
-        message: 'Kullanıcı başarıyla oluşturuldu',
-        data: newUser,
-        token: mockToken,
-      });
-    }, 800); // 800ms gecikme (API gibi hisset)
-  });
+  const response = await apiRegister(data);
+  return {
+    status: response.status || 'success',
+    message: response.message || 'Kayıt başarılı',
+    data: response.data,
+    token: response.token,
+  };
 }
 
-// GİRİŞ API ÇAĞRISI
+// GİRİŞ API ÇAĞRISI (gerçek endpoint)
 export async function loginUser(data: LoginData): Promise<AuthResponse> {
-  // Gerçek API çağrısı (Backend hazır olunca):
-  // const response = await axios.post('/auth/login', data);
-  // return response.data;
-
-  // Mock veri
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = MOCK_USERS[data.email];
-
-      // Email veya şifre hatalı
-      if (!user || user.password !== data.password) {
-        reject({
-          status: 'error',
-          message: 'Email veya şifre hatalı',
-          code: 'INVALID_CREDENTIALS',
-        });
-        return;
-      }
-
-      const mockToken = `token_${user.id}_${Date.now()}`;
-
-      resolve({
-        status: 'success',
-        message: 'Giriş başarılı',
-        data: {
-          id: user.id,
-          full_name: user.full_name,
-          email: user.email,
-          phone_number: user.phone_number,
-          user_type: user.user_type,
-          created_at: user.full_name ? new Date().toISOString() : '',
-        },
-        token: mockToken,
-      });
-    }, 800);
-  });
+  const response = await apiLogin(data);
+  return {
+    status: response.status || 'success',
+    message: response.message || 'Giriş başarılı',
+    data: response.data,
+    token: response.token,
+  };
 }
 
 // PROFIL KONTROL (Token ile)
 export async function checkProfile(token: string): Promise<User> {
-  // Gerçek API çağrısı:
-  // const response = await axios.get('/auth/me', {
-  //   headers: { Authorization: `Bearer ${token}` }
-  // });
-  // return response.data.data;
-
-  // Mock veri
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (!token || token.length === 0) {
-        reject({
-          status: 'error',
-          message: 'Token geçersiz veya süresi dolmuş',
-          code: 'INVALID_TOKEN',
-        });
-        return;
-      }
-
-      // Token'dan user ID'yi çıkart (basit mock)
-      try {
-        const parts = token.split('_');
-        if (parts.length < 2) {
-          throw new Error('Token formatı hatalı');
-        }
-        
-        const userId = parseInt(parts[1], 10);
-        
-        if (isNaN(userId)) {
-          throw new Error('User ID parse edilemedi');
-        }
-
-        const user = Object.values(MOCK_USERS).find(u => u.id === userId);
-
-        if (!user) {
-          reject({
-            status: 'error',
-            message: 'Kullanıcı bulunamadı',
-            code: 'USER_NOT_FOUND',
-          });
-          return;
-        }
-
-        resolve({
-          id: user.id,
-          full_name: user.full_name,
-          email: user.email,
-          phone_number: user.phone_number,
-          user_type: user.user_type,
-          created_at: new Date().toISOString(),
-        });
-      } catch (error) {
-        reject({
-          status: 'error',
-          message: 'Token doğrulama hatası: ' + String(error),
-          code: 'TOKEN_ERROR',
-        });
-      }
-    }, 300);
-  });
+  const response = await apiMe(token);
+  return response.data || response;
 }

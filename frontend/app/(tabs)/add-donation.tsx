@@ -4,6 +4,7 @@ import { CustomInput } from '@/components/ui/custom-input';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { createDonation } from '@/services/api-service';
 import { getCurrentLocation, LocationCoords } from '@/utils/location-service';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const CATEGORIES = ['🍞 Gıda', '👕 Giyim', '📚 Kitap', '🏠 Ev Eşyası', '❓ Diğer'];
 
 export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -108,11 +110,18 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        nestedScrollEnabled={false}
+        scrollEventThrottle={16}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        scrollEnabled={true}
+      >
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
             🎁 Bağış Ekle
@@ -201,17 +210,18 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
           disabled={loading}
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
         />
-      </ThemedView>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
+    paddingHorizontal: 16,
   },
   container: {
-    paddingHorizontal: 16,
+    flex: 1,
   },
   header: {
     marginBottom: 24,
@@ -225,6 +235,30 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1000,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
   label: {
     fontSize: 14,

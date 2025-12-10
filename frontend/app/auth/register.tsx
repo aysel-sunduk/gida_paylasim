@@ -99,20 +99,21 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
-      showsVerticalScrollIndicator={true}
-      keyboardShouldPersistTaps="handled"
-      bounces={true}
-      nestedScrollEnabled={false}
-      scrollEventThrottle={16}
-      alwaysBounceVertical={false}
-    >
-      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        nestedScrollEnabled={false}
+        scrollEventThrottle={16}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <ThemedText style={styles.logo}>🍽️</ThemedText>
+          <ThemedText style={styles.logo}>🍽️</ThemedText>
           </View>
           <ThemedText type="title" style={styles.title}>
             Kayıt Ol
@@ -254,17 +255,18 @@ export default function RegisterScreen() {
             🏠 <ThemedText style={{ fontWeight: 'bold' }}>Barınak Gönüllüsü</ThemedText> - Hayvan barınağı için
           </ThemedText>
         </View>
-      </ThemedView>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingBottom: 20,
+    flexGrow: 1,
+    paddingHorizontal: 16,
   },
   container: {
-    paddingHorizontal: 16,
+    flex: 1,
   },
   header: {
     alignItems: 'center',
@@ -292,6 +294,14 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 56,
     textAlign: 'center',
+  },
+  backRow: {
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    color: '#4CAF50',
+    fontWeight: '700',
   },
   title: {
     fontSize: 28,

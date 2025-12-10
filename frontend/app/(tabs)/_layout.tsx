@@ -4,13 +4,28 @@ import React from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Alert } from 'react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const handleLogout = async () => {
-    await signOut();
+    Alert.alert(
+      'Çıkış',
+      'Hesaptan çıkmak istediğinize emin misiniz?',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Çıkış Yap',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -42,6 +57,8 @@ export default function TabLayout() {
           title: 'Bağış Ekle',
           headerTitle: '🎁 Yeni Bağış Ekle',
           tabBarIcon: ({ color }) => <MaterialCommunityIcons size={28} name="plus-circle" color={color} />,
+          // donor olmayanlar için tab gizleme
+          href: user?.user_type === 'donor' ? '/(tabs)/add-donation' : null,
         }}
       />
     </Tabs>
