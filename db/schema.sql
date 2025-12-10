@@ -17,6 +17,7 @@ CREATE TABLE donations (
     donor_id INTEGER REFERENCES users(id),         -- Hangi kullanıcı bağışladı?
     title VARCHAR(150) NOT NULL,                  -- Örneğin: "3 kg Domates", "Kafe Artık Yemekleri"
     description TEXT,                             -- Detaylı açıklama
+    category VARCHAR(50),                         -- Kategori (Gıda, Giyim, vb.)
     quantity VARCHAR(50),                         -- Miktar (ör: "5 porsiyon", "1 kutu", "Bilinmiyor")
     is_for_animals BOOLEAN DEFAULT FALSE,         -- Hayvan barınağı için mi?
     is_reserved BOOLEAN DEFAULT FALSE,            -- İlan rezerve edildi mi?
@@ -29,6 +30,9 @@ CREATE TABLE donations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Eğer tablo zaten varsa, category kolonunu eklemek için:
+-- ALTER TABLE donations ADD COLUMN IF NOT EXISTS category VARCHAR(50);
 
 -- 3. KONUM SORGULARINI HIZLANDIRMAK İÇİN İNDEKSLER
 -- GIST indeksi, PostGIS coğrafi sorgularını (ST_DWithin gibi) çok hızlı yapar.
