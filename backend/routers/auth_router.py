@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from backend.config.database import SessionLocal
 from backend.models.user import User
 from backend.schemas.user import (
-    UserRegister, 
-    UserLogin, 
+    UserRegister,
+    UserLogin,
     UserResponse,
     AuthRegisterResponse,
     AuthLoginResponse,
@@ -26,9 +26,20 @@ def get_db():
         db.close()
 
 
+def _ensure_password_limit(password: str):
+    """Reject passwords that exceed bcrypt's 72-byte limit."""
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=400,
+            detail={"status": "error", "message": "Şifre en fazla 72 karakter olmalı."},
+        )
+
+
 # REGISTER — Yeni kullanıcı oluştur
 @router.post("/register", status_code=201, response_model=AuthRegisterResponse)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
+    _ensure_password_limit(user_data.password)
+
     # Email daha önce kullanılmış mı kontrol et
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
@@ -76,6 +87,8 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 # LOGIN — JWT Token oluştur
 @router.post("/login", status_code=200, response_model=AuthLoginResponse)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    _ensure_password_limit(user_data.password)
+
     # Email ile kullanıcıyı bul
     user = db.query(User).filter(User.email == user_data.email).first()
 

@@ -16,7 +16,7 @@ class UserType(str, Enum):
 class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=3, max_length=100)  # Tam ad
     email: EmailStr                                               # Geçerli email
-    password: str = Field(..., min_length=6)                     # Minimum 6 karakter
+    password: str = Field(..., min_length=6, max_length=72)      # Bcrypt sınırı: 72 byte
     phone_number: str | None = None                               # Opsiyonel telefon
     user_type: UserType                                           # Enum tipinde kullanıcı türü
 
@@ -25,7 +25,7 @@ class UserRegister(BaseModel):
 # KULLANICI LOGIN (INPUT)
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=72)  # Bcrypt sınırı
 
 
 
