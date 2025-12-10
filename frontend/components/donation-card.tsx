@@ -1,4 +1,4 @@
-import { Dimensions, StyleSheet, TouchableOpacity } from 'react-native';
+import { Dimensions, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -41,6 +41,17 @@ export function DonationCard({ donation, onPress }: DonationCardProps) {
     return '#FF9800';
   };
 
+  const openDirections = () => {
+    const { latitude, longitude, title } = donation;
+    const label = encodeURIComponent(title || 'Hedef');
+    const latlng = `${latitude},${longitude}`;
+    if (Platform.OS === 'ios') {
+      Linking.openURL(`http://maps.apple.com/?daddr=${latlng}&q=${label}`);
+    } else {
+      Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${latlng}&query=${label}`);
+    }
+  };
+
   return (
     <TouchableOpacity 
       onPress={() => onPress(donation)}
@@ -81,7 +92,10 @@ export function DonationCard({ donation, onPress }: DonationCardProps) {
           )}
         </ThemedView>
 
-        <ThemedText style={styles.tapHint}>👆 Detaylar için dokunun</ThemedText>
+        <ThemedText style={styles.tapHint}>👆 Detaylar veya yol tarifi için dokunun</ThemedText>
+        <TouchableOpacity style={styles.directionsBtn} onPress={openDirections} activeOpacity={0.8}>
+          <ThemedText style={styles.directionsText}>🧭 Yol Tarifi</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     </TouchableOpacity>
   );
@@ -164,6 +178,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#aaa',
     fontStyle: 'italic',
+    marginBottom: 6,
+  },
+  directionsBtn: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#4CAF50',
+    borderRadius: 6,
+  },
+  directionsText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
   },
 });
 
