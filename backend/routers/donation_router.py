@@ -54,6 +54,7 @@ def donation_to_response(db: Session, donation: Donation) -> DonationResponse:
         quantity=donation.quantity,
         is_for_animals=donation.is_for_animals,
         is_reserved=donation.is_reserved,
+        reserved_by=donation.reserved_by,
         is_collected=donation.is_collected,
         latitude=coords["latitude"],
         longitude=coords["longitude"],
@@ -69,8 +70,18 @@ def get_donations(
     latitude: float | None = Query(None, description="Enlem (yakın bağışlar için)"),
     longitude: float | None = Query(None, description="Boylam (yakın bağışlar için)"),
     radius_km: float | None = Query(None, description="Arama yarıçapı (km)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
+    # Rol bazlı kategori zorlaması
+    role_category = {
+        "shelter_volunteer": "atık yemek",
+        "recipient": "temiz yemek",
+    }
+    enforced_category = role_category.get(current_user.get("user_type"))
+    if enforced_category:
+        category = enforced_category
+
     # Konum bazlı filtreleme (latitude, longitude varsa PostGIS kullan)
     if latitude is not None and longitude is not None:
         radius_m = (radius_km * 1000) if radius_km else 5000  # Varsayılan 5 km
@@ -218,6 +229,86 @@ def update_donation(
     return DonationDetailResponse(
         data=donation_to_response(db, donation),
         message="Bağış başarıyla güncellendi"
+    )
+
+
+# POST /donations/:id/reserve — Bağışı rezerve et
+@router.post("/{donation_id}/reserve", status_code=200, response_model=DonationDetailResponse)
+def reserve_donation(
+    donation_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    donation = db.query(Donation).filter(Donation.id == donation_id).first()
+
+    if not donation:
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "message": "Bağış bulunamadı."}
+        )
+
+    if donation.is_collected:
+        raise HTTPException(
+            status_code=400,
+            detail={"status": "error", "message": "Bağış zaten teslim alınmış."}
+        )
+
+    # Başkası tarafından rezerve ise reddet
+    if donation.is_reserved and donation.reserved_by and donation.reserved_by != current_user["user_id"]:
+        raise HTTPException(
+            status_code=400,
+            detail={"status": "error", "message": "Bağış başka bir kullanıcı tarafından rezerve edilmiş."}
+        )
+
+    donation.is_reserved = True
+    donation.reserved_by = current_user["user_id"]
+
+    db.commit()
+    db.refresh(donation)
+
+    return DonationDetailResponse(
+        data=donation_to_response(db, donation),
+        message="Bağış rezerve edildi"
+    )
+
+
+# POST /donations/:id/cancel_reservation — Rezervasyon iptal et
+@router.post("/{donation_id}/cancel_reservation", status_code=200, response_model=DonationDetailResponse)
+def cancel_reservation(
+    donation_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    donation = db.query(Donation).filter(Donation.id == donation_id).first()
+
+    if not donation:
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "message": "Bağış bulunamadı."}
+        )
+
+    if not donation.is_reserved:
+        raise HTTPException(
+            status_code=400,
+            detail={"status": "error", "message": "Bağış rezerve değil."}
+        )
+
+    # Sadece rezervasyonu yapan veya bağışı oluşturan kişi iptal edebilir
+    if donation.reserved_by not in (None, current_user["user_id"]) and donation.donor_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail={"status": "error", "message": "Rezervasyonu sadece rezervasyonu yapan veya bağış sahibi iptal edebilir."}
+        )
+
+    donation.is_reserved = False
+    donation.reserved_by = None
+
+    db.commit()
+    db.refresh(donation)
+
+    return DonationDetailResponse(
+        data=donation_to_response(db, donation),
+        message="Rezervasyon iptal edildi"
     )
 
 

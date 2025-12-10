@@ -15,6 +15,7 @@ CREATE TABLE users (
 CREATE TABLE donations (
     id SERIAL PRIMARY KEY,
     donor_id INTEGER REFERENCES users(id),         -- Hangi kullanıcı bağışladı?
+    reserved_by INTEGER REFERENCES users(id),      -- Rezervasyonu yapan kullanıcı
     title VARCHAR(150) NOT NULL,                  -- Örneğin: "3 kg Domates", "Kafe Artık Yemekleri"
     description TEXT,                             -- Detaylı açıklama
     category VARCHAR(50),                         -- Kategori (Gıda, Giyim, vb.)
