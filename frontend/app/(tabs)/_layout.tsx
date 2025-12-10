@@ -1,33 +1,47 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: '#4CAF50',
+        headerShown: true,
+        headerRight: () => (
+          <MaterialCommunityIcons
+            name="logout"
+            size={24}
+            color="#4CAF50"
+            style={{ marginRight: 16, cursor: 'pointer' }}
+            onPress={handleLogout}
+          />
+        ),
       }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Harita',
+          headerTitle: '🗺️ Harita ve Bağışlar',
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons size={28} name="map" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="add-donation"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Bağış Ekle',
+          headerTitle: '🎁 Yeni Bağış Ekle',
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons size={28} name="plus-circle" color={color} />,
         }}
       />
     </Tabs>
