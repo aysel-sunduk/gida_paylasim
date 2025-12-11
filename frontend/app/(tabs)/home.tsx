@@ -4,8 +4,9 @@ import { ThemedView } from '@/components/themed-view';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useAuth } from '@/contexts/auth-context';
 import { cancelReservation, getDonations, getDonationsByLocation, reserveDonation } from '@/services/api-service';
+import { getAuthToken } from '@/services/auth-service';
 import { calculateDistance, getCurrentLocation, LocationCoords } from '@/utils/location-service';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -15,6 +16,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const router = useRouter();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [displayedDonations, setDisplayedDonations] = useState<Donation[]>([]);
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
@@ -47,6 +49,12 @@ export default function HomeScreen() {
     setLoading(true);
     setError(null);
     try {
+      const token = await getAuthToken();
+      if (!token) {
+        setLoading(false);
+        router.replace('/auth/login');
+        return;
+      }
       let location = await getCurrentLocation();
       if (!location) {
         location = { latitude: 41.0082, longitude: 28.9784, accuracy: 0 };

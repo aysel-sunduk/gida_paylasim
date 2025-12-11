@@ -117,7 +117,7 @@ export default function LoginScreen() {
 
             {/* Giriş Butonu */}
             <PrimaryButton
-              title={loading ? '⏳ Giriş yapılıyor...' : '✅ Giriş Yap'}
+              title={loading ? '⏳ Giriş yapılıyor...' : ' Giriş Yap'}
               onPress={handleLogin}
               disabled={loading}
               style={[styles.button, loading && styles.buttonDisabled]}

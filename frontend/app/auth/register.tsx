@@ -226,7 +226,7 @@ export default function RegisterScreen() {
 
             {/* Kayıt Ol Butonu */}
             <PrimaryButton
-              title={loading ? '⏳ Kaydediliyor...' : '✅ Kayıt Ol'}
+              title={loading ? '⏳ Kaydediliyor...' : 'Kayıt Ol'}
               onPress={handleRegister}
               disabled={loading}
               style={[styles.button, loading && styles.buttonDisabled]}
