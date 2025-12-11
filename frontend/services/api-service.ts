@@ -25,6 +25,8 @@ export interface Donation extends DonationCreate {
   created_at: string;
   updated_at?: string;
   is_reserved?: boolean;
+  donor_id?: number | null;
+  reserved_by?: number | null;
   is_collected?: boolean;
   is_for_animals?: boolean;
 }
@@ -38,12 +40,14 @@ export const ENDPOINTS = {
   DONATIONS: {
     ROOT: '/donations',
     BY_ID: (id: number) => `/donations/${id}`,
-    SEARCH: '/donations/search',
+    RESERVE: (id: number) => `/donations/${id}/reserve`,
+    CANCEL_RESERVATION: (id: number) => `/donations/${id}/cancel_reservation`,
   },
 };
 
 async function authHeaders() {
   const token = await AsyncStorage.getItem('auth_token');
+  console.log('authHeaders token =>', token);
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -78,7 +82,11 @@ export async function getDonations(params?: {
   longitude?: number;
   radius_km?: number;
 }) {
-  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.ROOT, { params });
+  const headers = await authHeaders();
+  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.ROOT, {
+    params,
+    headers,
+  });
   return res.data?.data || res.data;
 }
 
@@ -105,9 +113,23 @@ export async function deleteDonation(id: number) {
   return res.data;
 }
 
+export async function reserveDonation(id: number) {
+  const headers = await authHeaders();
+  const res = await apiClient.post<ApiResponse<Donation>>(ENDPOINTS.DONATIONS.RESERVE(id), null, { headers });
+  return res.data?.data || res.data;
+}
+
+export async function cancelReservation(id: number) {
+  const headers = await authHeaders();
+  const res = await apiClient.post<ApiResponse<Donation>>(ENDPOINTS.DONATIONS.CANCEL_RESERVATION(id), null, { headers });
+  return res.data?.data || res.data;
+}
+
 export async function getDonationsByLocation(latitude: number, longitude: number, radiusKm: number = 10) {
-  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.SEARCH, {
+  const headers = await authHeaders();
+  const res = await apiClient.get<ApiResponse<Donation[]>>(ENDPOINTS.DONATIONS.ROOT, {
     params: { latitude, longitude, radius_km: radiusKm },
+    headers,
   });
   return res.data?.data || res.data;
 }

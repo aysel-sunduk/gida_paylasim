@@ -3,16 +3,18 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useAuth } from '@/contexts/auth-context';
-import { getDonations } from '@/services/api-service';
+import { cancelReservation, getDonations, getDonationsByLocation, reserveDonation } from '@/services/api-service';
 import { calculateDistance, getCurrentLocation, LocationCoords } from '@/utils/location-service';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { useNavigation } from 'expo-router';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [displayedDonations, setDisplayedDonations] = useState<Donation[]>([]);
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
@@ -20,11 +22,26 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<'all' | 'temiz' | 'atik' | 'reserved'>('all');
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: showMap
+        ? undefined
+        : () => (
+            <TouchableOpacity onPress={() => setShowMap(true)} style={styles.backButton}>
+              <ThemedText style={styles.backButtonIcon}>←</ThemedText>
+            </TouchableOpacity>
+          ),
+      headerTitle: 'Harita ve Bağışlar',
+    });
+  }, [navigation, showMap]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -44,9 +61,27 @@ export default function HomeScreen() {
     }
   };
 
+  const applyFilter = (items: Donation[], key: typeof filter = filter) => {
+    switch (key) {
+      case 'temiz':
+        return items.filter((d) => d.category === 'temiz yemek');
+      case 'atik':
+        return items.filter((d) => d.category === 'atık yemek');
+      case 'reserved':
+        return items.filter((d) => d.is_reserved);
+      default:
+        return items;
+    }
+  };
+
   const loadDonations = async (location?: LocationCoords) => {
     try {
-      const data = await getDonations();
+      let data: Donation[] = [];
+      if (location) {
+        data = await getDonationsByLocation(location.latitude, location.longitude, 10);
+      } else {
+        data = await getDonations();
+      }
       const enrichedDonations = data.map((donation) => {
         let distance: number | undefined;
         if (location) {
@@ -62,7 +97,7 @@ export default function HomeScreen() {
 
       enrichedDonations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
       setDonations(enrichedDonations);
-      setDisplayedDonations(enrichedDonations);
+      setDisplayedDonations(applyFilter(enrichedDonations, filter));
     } catch (error) {
       console.error('Bağışları yüklerken hata:', error);
       setError('Bağışlar yüklenemedi');
@@ -102,6 +137,32 @@ export default function HomeScreen() {
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       });
+    }
+  };
+
+  const handleReserve = async (donationId: number) => {
+    setActioningId(donationId);
+    try {
+      await reserveDonation(donationId);
+      await loadDonations(userLocation || undefined);
+      Alert.alert('✔️ Rezervasyon', 'Bağış sizin için rezerve edildi.');
+    } catch (err: any) {
+      Alert.alert('Hata', err?.response?.data?.detail?.message || 'Rezervasyon yapılamadı');
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleCancelReserve = async (donationId: number) => {
+    setActioningId(donationId);
+    try {
+      await cancelReservation(donationId);
+      await loadDonations(userLocation || undefined);
+      Alert.alert('↩️ Rezervasyon iptal', 'Rezervasyon iptal edildi.');
+    } catch (err: any) {
+      Alert.alert('Hata', err?.response?.data?.detail?.message || 'Rezervasyon iptal edilemedi');
+    } finally {
+      setActioningId(null);
     }
   };
 
@@ -166,29 +227,58 @@ export default function HomeScreen() {
           </MapView>
 
           <PrimaryButton
-            title="📋 Bağış Listemi Göster"
+            title="📋 Bağış Listesini Göster"
             onPress={() => setShowMap(false)}
             style={styles.toggleButton}
           />
 
           <PrimaryButton
-            title="📍 Konumuma Git"
+            title="📍"
+            accessibilityLabel="Konumuma git"
             onPress={animateToUserLocation}
             style={styles.locationButton}
           />
         </View>
       ) : (
         <View style={styles.listContainer}>
-          <PrimaryButton
-            title="🗺️ Haritayı Göster"
-            onPress={() => setShowMap(true)}
-            style={styles.toggleButton}
-          />
-          {user?.user_type === 'donor' && (
-            <ThemedText style={styles.infoBanner}>
-              📢 Sadece Bağışçı rolünde bağış ekleyebilirsiniz.
-            </ThemedText>
-          )}
+          <View style={styles.listHeaderContainer}>
+            {user?.user_type === 'donor' && (
+              <View style={styles.filterRow}>
+                {[
+                  { key: 'all', label: 'Hepsi' },
+                  { key: 'temiz', label: 'Temiz' },
+                  { key: 'atik', label: 'Atık' },
+                  { key: 'reserved', label: 'Rezerve' },
+                ].map((f) => (
+                  <PrimaryButton
+                    key={f.key}
+                    title={f.label}
+                    onPress={() => {
+                      const next = f.key as typeof filter;
+                      setFilter(next);
+                      setDisplayedDonations(applyFilter(donations, next));
+                    }}
+                    style={[
+                      styles.filterBtn,
+                      filter === f.key && styles.filterBtnActive,
+                    ]}
+                    textStyle={[
+                      styles.filterBtnText,
+                      filter === f.key && styles.filterBtnTextActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+            {user?.user_type === 'recipient' && (
+              <ThemedText style={styles.infoBanner}>Bu hesapta yalnız temiz yemekler listelenir.</ThemedText>
+            )}
+            {user?.user_type === 'shelter_volunteer' && (
+              <ThemedText style={[styles.infoBanner, styles.infoBannerWarning]}>
+                Bu hesapta yalnız atık yemekler listelenir.
+              </ThemedText>
+            )}
+          </View>
 
           {donations.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -201,11 +291,46 @@ export default function HomeScreen() {
             <FlatList
               data={displayedDonations}
               keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
               renderItem={({ item }) => (
-                <DonationCard
-                  donation={item}
-                  onPress={handleDonationPress}
-                />
+                <View style={styles.cardWrapper}>
+                  <DonationCard
+                    donation={item}
+                    onPress={handleDonationPress}
+                  />
+
+                  {user?.user_type !== 'donor' && (
+                    <View style={styles.actionRow}>
+                      {!item.is_reserved && !item.is_collected && (
+                        <PrimaryButton
+                          title="📌 Rezerve Et"
+                          onPress={() => handleReserve(item.id)}
+                          disabled={actioningId === item.id}
+                          style={styles.reserveBtn}
+                          textStyle={styles.reserveBtnText}
+                        />
+                      )}
+
+                      {item.is_reserved && (item.reserved_by === user?.id || item.donor_id === user?.id) && !item.is_collected && (
+                        <PrimaryButton
+                          title="↩️ Rezervasyonu İptal"
+                          onPress={() => handleCancelReserve(item.id)}
+                          disabled={actioningId === item.id}
+                          style={styles.cancelBtn}
+                          textStyle={styles.cancelBtnText}
+                        />
+                      )}
+
+                      {item.is_reserved && item.reserved_by !== user?.id && (
+                        <ThemedText style={styles.reservedBadge}>Rezerve edildi</ThemedText>
+                      )}
+
+                      {item.is_collected && (
+                        <ThemedText style={styles.collectedBadge}>Teslim alınmış</ThemedText>
+                      )}
+                    </View>
+                  )}
+                </View>
               )}
               refreshControl={
                 <RefreshControl
@@ -237,6 +362,52 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
   },
+  listHeaderContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  backButtonIcon: {
+    color: '#333',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 0,
+  },
+  filterBtn: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    minWidth: 80,
+  },
+  filterBtnActive: {
+    backgroundColor: '#4CAF50',
+  },
+  filterBtnText: {
+    color: '#444',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  filterBtnTextActive: {
+    color: '#fff',
+  },
   toggleButton: {
     position: 'absolute',
     bottom: 20,
@@ -244,15 +415,75 @@ const styles = StyleSheet.create({
     right: 16,
     backgroundColor: '#4CAF50',
   },
+  cardWrapper: {
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 6,
+    marginBottom: 12,
+    backgroundColor: '#f7f7f7',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  reserveBtn: {
+    backgroundColor: '#2e7d32',
+    minWidth: 140,
+  },
+  cancelBtn: {
+    backgroundColor: '#f57c00',
+    minWidth: 160,
+  },
+  reserveBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  reservedBadge: {
+    fontSize: 12,
+    color: '#c62828',
+    fontWeight: '700',
+    backgroundColor: '#ffebee',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  collectedBadge: {
+    fontSize: 12,
+    color: '#2e7d32',
+    fontWeight: '700',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   locationButton: {
     position: 'absolute',
-    bottom: 80,
-    right: 16,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    paddingHorizontal: 8,
+    bottom: 96,
+    right: 20,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    paddingHorizontal: 0,
     backgroundColor: '#2196F3',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
   loadingText: {
     marginTop: 20,
@@ -261,14 +492,19 @@ const styles = StyleSheet.create({
   },
   infoBanner: {
     marginTop: 8,
-    marginHorizontal: 12,
-    marginBottom: 12,
-    padding: 10,
+    marginHorizontal: 0,
+    marginBottom: 0,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#f0f7ed',
     color: '#2e7d32',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  infoBannerWarning: {
+    backgroundColor: '#fff3e0',
+    color: '#ef6c00',
   },
   emptyContainer: {
     flex: 1,

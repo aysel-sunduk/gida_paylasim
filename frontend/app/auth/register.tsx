@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { registerUser, saveAuthToken } from '@/services/auth-service';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const USER_TYPES = [
@@ -84,7 +84,7 @@ export default function RegisterScreen() {
         user_type: userType,
       });
 
-      await saveAuthToken(response.token, response.data, false);
+      await saveAuthToken(response.token, response.data);
 
       await signIn(response.data, response.token);
       
@@ -99,164 +99,172 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
-        showsVerticalScrollIndicator={true}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-        nestedScrollEnabled={false}
-        scrollEventThrottle={16}
-        alwaysBounceVertical={false}
-        overScrollMode="never"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-          <ThemedText style={styles.logo}>🍽️</ThemedText>
-          </View>
-          <ThemedText type="title" style={styles.title}>
-            Kayıt Ol
-          </ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Gıda Paylaşım topluluğuna katıl
-          </ThemedText>
-        </View>
-
-        {/* Hata Mesajı */}
-        {error && (
-          <View style={styles.errorBanner}>
-            <ThemedText style={styles.errorText}>⚠️ {error}</ThemedText>
-          </View>
-        )}
-
-        {/* İsim-Soyisim */}
-        <CustomInput
-          placeholder="İsim Soyisim"
-          value={fullName}
-          onChangeText={(text) => {
-            setFullName(text);
-            setError(null);
-          }}
-          editable={!loading}
-          autoCapitalize="words"
-        />
-
-        {/* Email */}
-        <CustomInput
-          placeholder="Email"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError(null);
-          }}
-          editable={!loading}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        {/* Telefon */}
-        <CustomInput
-          placeholder="Telefon Numarası (+90551234567 veya 05511234567)"
-          value={phoneNumber}
-          onChangeText={(text) => {
-            setPhoneNumber(text);
-            setError(null);
-          }}
-          editable={!loading}
-          keyboardType="phone-pad"
-        />
-
-        {/* Şifre */}
-        <CustomInput
-          placeholder="Şifre (min 6 karakter)"
-          value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            setError(null);
-          }}
-          secureTextEntry
-          editable={!loading}
-        />
-
-        {/* Şifre Onayla */}
-        <CustomInput
-          placeholder="Şifreyi Onayla"
-          value={confirmPassword}
-          onChangeText={(text) => {
-            setConfirmPassword(text);
-            setError(null);
-          }}
-          secureTextEntry
-          editable={!loading}
-        />
-
-        {/* Kullanıcı Tipi Seçimi */}
-        <ThemedText style={styles.label}>Kullanıcı Tipi Seç</ThemedText>
-        <View style={styles.userTypeGrid}>
-          {USER_TYPES.map((type, index) => (
-            <TouchableOpacity
-              key={type.value}
-              onPress={() => setUserType(type.value)}
-              disabled={loading}
-              style={[
-                styles.userTypeButton,
-                index === 2 && styles.userTypeButtonFullWidth,
-                userType === type.value && styles.userTypeButtonActive,
-                loading && styles.userTypeButtonDisabled,
-              ]}
-            >
-              <ThemedText
-                style={[
-                  styles.userTypeButtonText,
-                  userType === type.value && styles.userTypeButtonTextActive,
-                ]}
-              >
-                {type.label}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Kayıt Ol Butonu */}
-        <PrimaryButton
-          title={loading ? '⏳ Kaydediliyor...' : '✅ Kayıt Ol'}
-          onPress={handleRegister}
-          disabled={loading}
-          style={[styles.button, loading && styles.buttonDisabled]}
-        />
-
-        {/* Giriş Linki */}
-        <View style={styles.loginContainer}>
-          <ThemedText style={styles.loginText}>Zaten hesabınız var mı? </ThemedText>
-          <TouchableOpacity
-            onPress={() => router.push('/auth/login')}
-            disabled={loading}
-            style={styles.loginLinkButton}
+    <ImageBackground
+      source={require('../../assets/image/arkaplan.png')}
+      style={styles.bgImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
+        <ThemedView style={[styles.container, { paddingTop: insets.top, backgroundColor: 'transparent' }]}>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+            nestedScrollEnabled={false}
+            scrollEventThrottle={16}
+            alwaysBounceVertical={false}
+            overScrollMode="never"
           >
-            <ThemedText
-              style={[styles.loginLinkText, loading && styles.linkDisabledText]}
-            >
-              Giriş Yap
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <ThemedText style={styles.logo}>🍽️</ThemedText>
+              </View>
+              <ThemedText type="title" style={styles.title}>
+                Kayıt Ol
+              </ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Gıda Paylaşım topluluğuna katıl
+              </ThemedText>
+            </View>
 
-        {/* Bilgi */}
-        <View style={styles.infoBox}>
-          <ThemedText style={styles.infoTitle}>ℹ️ Kullanıcı Türleri:</ThemedText>
-          <ThemedText style={styles.infoText}>
-            🍞 <ThemedText style={{ fontWeight: 'bold' }}>Bağışçı</ThemedText> - Gıda bağışı yapan kişi
-          </ThemedText>
-          <ThemedText style={styles.infoText}>
-            👥 <ThemedText style={{ fontWeight: 'bold' }}>Alıcı</ThemedText> - Bağış alan kişi
-          </ThemedText>
-          <ThemedText style={styles.infoText}>
-            🏠 <ThemedText style={{ fontWeight: 'bold' }}>Barınak Gönüllüsü</ThemedText> - Hayvan barınağı için
-          </ThemedText>
-        </View>
-      </ScrollView>
-    </ThemedView>
+            {/* Hata Mesajı */}
+            {error && (
+              <View style={styles.errorBanner}>
+                <ThemedText style={styles.errorText}>⚠️ {error}</ThemedText>
+              </View>
+            )}
+
+            {/* İsim-Soyisim */}
+            <CustomInput
+              placeholder="İsim Soyisim"
+              value={fullName}
+              onChangeText={(text) => {
+                setFullName(text);
+                setError(null);
+              }}
+              editable={!loading}
+              autoCapitalize="words"
+            />
+
+            {/* Email */}
+            <CustomInput
+              placeholder="Email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setError(null);
+              }}
+              editable={!loading}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            {/* Telefon */}
+            <CustomInput
+              placeholder="Telefon Numarası (05511234567)"
+              value={phoneNumber}
+              onChangeText={(text) => {
+                setPhoneNumber(text);
+                setError(null);
+              }}
+              editable={!loading}
+              keyboardType="phone-pad"
+            />
+
+            {/* Şifre */}
+            <CustomInput
+              placeholder="Şifre (min 6 karakter)"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(null);
+              }}
+              secureTextEntry
+              editable={!loading}
+            />
+
+            {/* Şifre Onayla */}
+            <CustomInput
+              placeholder="Şifreyi Onayla"
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                setError(null);
+              }}
+              secureTextEntry
+              editable={!loading}
+            />
+
+            {/* Kullanıcı Tipi Seçimi */}
+            <ThemedText style={styles.label}>Kullanıcı Tipi Seç</ThemedText>
+            <View style={styles.userTypeGrid}>
+              {USER_TYPES.map((type, index) => (
+                <TouchableOpacity
+                  key={type.value}
+                  onPress={() => setUserType(type.value)}
+                  disabled={loading}
+                  style={[
+                    styles.userTypeButton,
+                    index === 2 && styles.userTypeButtonFullWidth,
+                    userType === type.value && styles.userTypeButtonActive,
+                    loading && styles.userTypeButtonDisabled,
+                  ]}
+                >
+                  <ThemedText
+                    style={[
+                      styles.userTypeButtonText,
+                      userType === type.value && styles.userTypeButtonTextActive,
+                    ]}
+                  >
+                    {type.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Kayıt Ol Butonu */}
+            <PrimaryButton
+              title={loading ? '⏳ Kaydediliyor...' : '✅ Kayıt Ol'}
+              onPress={handleRegister}
+              disabled={loading}
+              style={[styles.button, loading && styles.buttonDisabled]}
+            />
+
+            {/* Giriş Linki */}
+            <View style={styles.loginContainer}>
+              <ThemedText style={styles.loginText}>Zaten hesabınız var mı? </ThemedText>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/login')}
+                disabled={loading}
+                style={styles.loginLinkButton}
+              >
+                <ThemedText
+                  style={[styles.loginLinkText, loading && styles.linkDisabledText]}
+                >
+                  Giriş Yap
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Bilgi */}
+            <View style={styles.infoBox}>
+              <ThemedText style={styles.infoTitle}>ℹ️ Kullanıcı Türleri:</ThemedText>
+              <ThemedText style={styles.infoText}>
+                🍞 <ThemedText style={{ fontWeight: 'bold' }}>Bağışçı</ThemedText> - Gıda bağışı yapan kişi
+              </ThemedText>
+              <ThemedText style={styles.infoText}>
+                👥 <ThemedText style={{ fontWeight: 'bold' }}>Alıcı</ThemedText> - Bağış alan kişi
+              </ThemedText>
+              <ThemedText style={styles.infoText}>
+                🏠 <ThemedText style={{ fontWeight: 'bold' }}>Barınak Gönüllüsü</ThemedText> - Hayvan barınağı için
+              </ThemedText>
+            </View>
+          </ScrollView>
+        </ThemedView>
+      </View>
+    </ImageBackground>
   );
 }
 
@@ -265,8 +273,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
   },
+  bgImage: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0)',
+  },
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     alignItems: 'center',
@@ -275,9 +291,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: '#4CAF50',
     alignItems: 'center',
     justifyContent: 'center',
@@ -292,7 +308,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   logo: {
-    fontSize: 56,
+    fontSize: 52,
     textAlign: 'center',
   },
   backRow: {
@@ -307,10 +323,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: '#fff',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
   },
   errorBanner: {
@@ -328,9 +345,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 16,
     marginBottom: 10,
+    color: '#f2f2f2',
   },
   userTypeGrid: {
     flexDirection: 'row',

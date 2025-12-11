@@ -32,15 +32,10 @@ export interface LoginData {
 import { apiLogin, apiMe, apiRegister } from './api-service';
 
 // Token ve kullanıcı verilerini localStorage'a kaydet
-export async function saveAuthToken(token: string, user: User, rememberMe: boolean) {
+export async function saveAuthToken(token: string, user: User) {
   try {
     await AsyncStorage.setItem('auth_token', token);
     await AsyncStorage.setItem('auth_user', JSON.stringify(user));
-    if (rememberMe) {
-      await AsyncStorage.setItem('remember_me', 'true');
-    } else {
-      await AsyncStorage.removeItem('remember_me');
-    }
   } catch (error) {
     console.error('Token kaydedilirken hata:', error);
     throw error;
@@ -68,22 +63,11 @@ export async function getStoredUser(): Promise<User | null> {
   }
 }
 
-// "Beni Hatırla" durumunu kontrol et
-export async function getRememberMeStatus(): Promise<boolean> {
-  try {
-    const rememberMe = await AsyncStorage.getItem('remember_me');
-    return rememberMe === 'true';
-  } catch (error) {
-    return false;
-  }
-}
-
 // Çıkış yap
 export async function logout() {
   try {
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('auth_user');
-    await AsyncStorage.removeItem('remember_me');
   } catch (error) {
     console.error('Çıkış yapılırken hata:', error);
     throw error;

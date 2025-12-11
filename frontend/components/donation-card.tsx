@@ -14,6 +14,10 @@ export interface Donation {
   distance?: number;
   quantity?: string;
   expiration_date?: string;
+  is_reserved?: boolean;
+  donor_id?: number | null;
+  reserved_by?: number | null;
+  is_collected?: boolean;
 }
 
 export type DonationCardProps = {
@@ -24,13 +28,21 @@ export type DonationCardProps = {
 export function DonationCard({ donation, onPress }: DonationCardProps) {
   const getCategoryEmoji = (category: string) => {
     const emojiMap: { [key: string]: string } = {
-      'Gıda': '🍞',
-      'Giyim': '👕',
-      'Kitap': '📚',
-      'Ev Eşyası': '🏠',
-      'Diğer': '❓',
+      'temiz yemek': '🍽️',
+      'atık yemek': '♻️',
     };
     return emojiMap[category] || '📦';
+  };
+
+  const getCategoryStyle = (category: string) => {
+    switch (category) {
+      case 'temiz yemek':
+        return { color: '#2e7d32', backgroundColor: '#e8f5e9', borderColor: '#a5d6a7' };
+      case 'atık yemek':
+        return { color: '#ef6c00', backgroundColor: '#fff3e0', borderColor: '#ffcc80' };
+      default:
+        return { color: '#555', backgroundColor: '#f0f0f0', borderColor: '#e0e0e0' };
+    }
   };
 
   const getDistanceColor = (distance?: number) => {
@@ -66,7 +78,18 @@ export function DonationCard({ donation, onPress }: DonationCardProps) {
             <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={1}>
               {donation.title}
             </ThemedText>
-            <ThemedText style={styles.category}>{donation.category}</ThemedText>
+            <ThemedText
+              style={[
+                styles.category,
+                {
+                  color: getCategoryStyle(donation.category).color,
+                  backgroundColor: getCategoryStyle(donation.category).backgroundColor,
+                  borderColor: getCategoryStyle(donation.category).borderColor,
+                },
+              ]}
+            >
+              {donation.category}
+            </ThemedText>
           </ThemedView>
         </ThemedView>
 

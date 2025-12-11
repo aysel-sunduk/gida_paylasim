@@ -1,19 +1,20 @@
-import { StyleSheet, TouchableOpacity, type TouchableOpacityProps } from 'react-native';
+import { StyleSheet, TouchableOpacity, type StyleProp, type TextStyle, type TouchableOpacityProps } from 'react-native';
 import { ThemedText } from '../themed-text';
 
 export type PrimaryButtonProps = TouchableOpacityProps & {
   title: string;
   onPress: () => void;
+  textStyle?: StyleProp<TextStyle>;
 };
 
-export function PrimaryButton({ title, onPress, style, ...rest }: PrimaryButtonProps) {
+export function PrimaryButton({ title, onPress, style, textStyle, ...rest }: PrimaryButtonProps) {
   return (
     <TouchableOpacity
       style={[styles.button, style]}
       onPress={onPress}
       {...rest}
     >
-      <ThemedText style={styles.text}>{title}</ThemedText>
+      <ThemedText style={[styles.text, textStyle]}>{title}</ThemedText>
     </TouchableOpacity>
   );
 }

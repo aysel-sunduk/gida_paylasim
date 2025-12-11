@@ -1,10 +1,4 @@
-import {
-    User,
-    checkProfile,
-    getAuthToken,
-    getRememberMeStatus,
-    logout
-} from '@/services/auth-service';
+import { User, checkProfile, getAuthToken, logout } from '@/services/auth-service';
 import React, { createContext, useContext, useEffect } from 'react';
 
 interface AuthContextType {
@@ -67,9 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const bootstrapAsync = async () => {
       try {
         const token = await getAuthToken();
-        const rememberMe = await getRememberMeStatus();
-
-        if (token && rememberMe) {
+        if (token) {
           try {
             const user = await checkProfile(token);
             dispatch({ type: 'RESTORE_TOKEN', payload: { user, token } });

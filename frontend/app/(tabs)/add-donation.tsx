@@ -4,19 +4,23 @@ import { CustomInput } from '@/components/ui/custom-input';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { createDonation } from '@/services/api-service';
 import { getCurrentLocation, LocationCoords } from '@/utils/location-service';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const CATEGORIES = ['🍞 Gıda', '👕 Giyim', '📚 Kitap', '🏠 Ev Eşyası', '❓ Diğer'];
+const CATEGORIES = [
+  { label: '🍽️ Temiz Yemek', value: 'temiz yemek' },
+  { label: '♻️ Atık Yemek', value: 'atık yemek' },
+];
 
 export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('🍞 Gıda');
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]['value']>('temiz yemek');
   const [quantity, setQuantity] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [location, setLocation] = useState<LocationCoords | null>(null);
@@ -27,6 +31,21 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
   useEffect(() => {
     requestLocation();
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerBackButton}
+          accessibilityLabel="Geri"
+        >
+          <ThemedText style={styles.headerBackIcon}>←</ThemedText>
+        </TouchableOpacity>
+      ),
+      headerTitle: 'Bağış Ekle',
+    });
+  }, [navigation, router]);
 
   const requestLocation = async () => {
     setLocationLoading(true);
@@ -77,7 +96,7 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
       await createDonation({
         title: title.trim(),
         description: description.trim(),
-        category: category.replace(/^[^\s]*\s+/, ''),
+        category,
         quantity: quantity.trim() || undefined,
         expiration_date: expirationDate.trim() || undefined,
         latitude: location!.latitude,
@@ -87,7 +106,8 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
       Alert.alert('✅ Başarılı', 'Bağışınız başarıyla eklendi!');
       setTitle('');
       setDescription('');
-      setCategory('🍞 Gıda');
+      // Varsayılan kategoriyi backend'in kabul ettiği değere sıfırla
+      setCategory('temiz yemek');
       setQuantity('');
       setExpirationDate('');
       setError(null);
@@ -112,7 +132,10 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingBottom: insets.bottom + 20, paddingTop: 16 },
+        ]}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
         bounces={false}
@@ -124,10 +147,10 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
       >
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            🎁 Bağış Ekle
+            Bağış Ekle
           </ThemedText>
           <ThemedText style={styles.subtitle}>
-            Sahip olmadığınız eşyaları paylaşın
+          Fazlalıkları değerli kılın
           </ThemedText>
         </View>
 
@@ -166,12 +189,16 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
         <View style={styles.categoryGrid}>
           {CATEGORIES.map((cat) => (
             <PrimaryButton
-              key={cat}
-              title={cat}
-              onPress={() => setCategory(cat)}
+              key={cat.value}
+              title={cat.label}
+              onPress={() => setCategory(cat.value)}
               style={[
                 styles.categoryButton,
-                category === cat && styles.categoryButtonActive,
+                category === cat.value && styles.categoryButtonActive,
+              ]}
+              textStyle={[
+                styles.categoryButtonText,
+                category === cat.value && styles.categoryButtonTextActive,
               ]}
               disabled={loading}
             />
@@ -197,11 +224,18 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
         <View style={styles.locationInfo}>
           <ThemedText style={styles.locationLabel}>📍 Konum</ThemedText>
           <ThemedText style={styles.locationValue}>
-            Lat: {location?.latitude.toFixed(4)}
+            Lat: {location?.latitude?.toFixed(4) ?? '—'}
           </ThemedText>
           <ThemedText style={styles.locationValue}>
-            Lon: {location?.longitude.toFixed(4)}
+            Lon: {location?.longitude?.toFixed(4) ?? '—'}
           </ThemedText>
+          <PrimaryButton
+            title={locationLoading ? '⏳ Konum alınıyor' : '📡 Konumu Yenile'}
+            onPress={requestLocation}
+            disabled={locationLoading || loading}
+            style={styles.refreshLocationButton}
+            textStyle={styles.refreshLocationText}
+          />
         </View>
 
         <PrimaryButton
@@ -218,47 +252,33 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   container: {
     flex: 1,
   },
   header: {
-    marginBottom: 24,
-    paddingVertical: 16,
+    marginBottom: 16,
+    paddingVertical: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: '800',
+    marginBottom: 6,
+    color: '#1f1f1f',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#777',
   },
-  backButton: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 1000,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  headerBackButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  backIcon: {
-    fontSize: 24,
-    color: '#4CAF50',
-    fontWeight: 'bold',
+  headerBackIcon: {
+    fontSize: 22,
+    color: '#333',
+    fontWeight: '700',
   },
   label: {
     fontSize: 14,
@@ -285,14 +305,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   categoryButton: {
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flex: 1,
     minWidth: '45%',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    height: 48,
   },
   categoryButtonActive: {
     backgroundColor: '#4CAF50',
+    borderColor: '#2e7d32',
+  },
+  categoryButtonText: {
+    color: '#1b1b1b',
+    fontWeight: '700',
+  },
+  categoryButtonTextActive: {
+    color: '#fff',
   },
   locationInfo: {
     backgroundColor: '#f5f5f5',
@@ -313,6 +344,14 @@ const styles = StyleSheet.create({
     color: '#999',
     marginBottom: 4,
     fontFamily: 'monospace',
+  },
+  refreshLocationButton: {
+    marginTop: 8,
+    backgroundColor: '#2196F3',
+  },
+  refreshLocationText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   submitButton: {
     marginTop: 24,
