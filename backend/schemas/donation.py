@@ -60,3 +60,8 @@ class DonationDetailResponse(BaseModel):
 class DonationCreateResponse(BaseModel):
     data: DonationResponse
     message: str | None = None
+
+
+class CategoryListResponse(BaseModel):
+    data: list[FoodCategory]
+    message: str

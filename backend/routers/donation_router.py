@@ -7,7 +7,8 @@ from backend.schemas.donation import (
     DonationResponse,
     DonationListResponse,
     DonationDetailResponse,
-    DonationCreateResponse
+    DonationCreateResponse,
+    CategoryListResponse
 )
 from backend.models.donation import Donation
 from backend.config.database import SessionLocal
@@ -140,6 +141,29 @@ def get_donations(
     return DonationListResponse(
         data=results,
         message=f"{len(results)} bağış bulundu"
+    )
+
+
+# GET /donations/categories — Mevcut kategori listesini döndür
+@router.get("/categories", status_code=200, response_model=CategoryListResponse)
+def get_categories(db: Session = Depends(get_db)):
+    categories = (
+        db.query(Donation.category)
+        .filter(Donation.category.isnot(None))
+        .distinct()
+        .all()
+    )
+
+    # DB'den gelen tuple listesini düzleştir ve None değerleri hariç tut
+    category_list = [row[0] for row in categories if row[0]]
+
+    # Eğer DB boşsa varsayılan kategorileri yine de gönder
+    if not category_list:
+        category_list = ["temiz yemek", "atık yemek"]
+
+    return CategoryListResponse(
+        data=category_list,
+        message=f"{len(category_list)} kategori bulundu"
     )
 
 
