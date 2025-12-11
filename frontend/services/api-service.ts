@@ -36,6 +36,7 @@ export const ENDPOINTS = {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
     ME: '/auth/me',
+    LOGOUT: '/auth/logout',
   },
   DONATIONS: {
     ROOT: '/donations',
@@ -72,6 +73,12 @@ export async function apiMe(token: string) {
   const res = await apiClient.get(ENDPOINTS.AUTH.ME, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  return res.data;
+}
+
+export async function apiLogout() {
+  const headers = await authHeaders();
+  const res = await apiClient.post(ENDPOINTS.AUTH.LOGOUT, null, { headers });
   return res.data;
 }
 
