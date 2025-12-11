@@ -63,5 +63,5 @@ class DonationCreateResponse(BaseModel):
 
 
 class CategoryListResponse(BaseModel):
-    data: list[FoodCategory]
-    message: str
+      data: list[str]
+      message: str
