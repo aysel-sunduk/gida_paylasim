@@ -69,3 +69,8 @@ class AuthLoginResponse(BaseModel):
 class AuthMeResponse(BaseModel):
     status: str = "success"
     data: UserResponse
+
+
+class AuthLogoutResponse(BaseModel):
+    status: str = "success"
+    message: str

@@ -9,6 +9,7 @@ from backend.schemas.user import (
     AuthRegisterResponse,
     AuthLoginResponse,
     AuthMeResponse,
+    AuthLogoutResponse,
     UserType
 )
 from backend.utils.hash import hash_password, verify_password
@@ -146,5 +147,14 @@ def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends
             user_type=UserType(user.user_type),
             created_at=user.created_at.isoformat() if user.created_at else None
         )
+    )
+
+
+# LOGOUT — JWT stateless; client token'ı siler
+@router.post("/logout", status_code=200, response_model=AuthLogoutResponse)
+def logout(current_user: dict = Depends(get_current_user)):
+    return AuthLogoutResponse(
+        status="success",
+        message="Çıkış yapıldı. Lütfen token'ı istemciden silin."
     )
 
