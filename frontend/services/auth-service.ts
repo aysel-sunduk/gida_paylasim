@@ -29,7 +29,7 @@ export interface LoginData {
   password: string;
 }
 
-import { apiLogin, apiLogout, apiMe, apiRegister } from './api-service';
+import { apiLogin, apiMe, apiRegister } from './api-service';
 
 // Token ve kullanıcı verilerini localStorage'a kaydet
 export async function saveAuthToken(token: string, user: User) {
@@ -66,11 +66,6 @@ export async function getStoredUser(): Promise<User | null> {
 // Çıkış yap
 export async function logout() {
   try {
-    try {
-      await apiLogout();
-    } catch (err) {
-      console.warn('Logout endpoint failed, clearing local token anyway:', err);
-    }
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('auth_user');
   } catch (error) {

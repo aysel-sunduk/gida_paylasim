@@ -2,9 +2,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { CustomInput } from '@/components/ui/custom-input';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { createDonation } from '@/services/api-service';
+import { createDonation, getDonationById, updateDonation } from '@/services/api-service';
 import { getCurrentLocation, LocationCoords } from '@/utils/location-service';
-import { useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,8 @@ const CATEGORIES = [
 export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter();
   const navigation = useNavigation();
+  const { donationId } = useLocalSearchParams<{ donationId?: string }>();
+  const isEditMode = Boolean(donationId);
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -26,11 +28,44 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(true);
+  const [prefillLoading, setPrefillLoading] = useState(isEditMode);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    requestLocation();
-  }, []);
+    if (!isEditMode) {
+      requestLocation();
+    }
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode || !donationId) return;
+
+    const loadDonation = async () => {
+      setPrefillLoading(true);
+      try {
+        const existing = await getDonationById(Number(donationId));
+        setTitle(existing.title ?? '');
+        setDescription(existing.description ?? '');
+        setCategory((existing.category as (typeof CATEGORIES)[number]['value']) || 'temiz yemek');
+        setQuantity(existing.quantity ?? '');
+        setExpirationDate(existing.expiration_date ?? '');
+        setLocation({
+          latitude: existing.latitude,
+          longitude: existing.longitude,
+          accuracy: 0,
+        });
+        setError(null);
+      } catch (err) {
+        setError('Bağış bilgisi alınamadı. Lütfen tekrar deneyin.');
+        console.error(err);
+      } finally {
+        setPrefillLoading(false);
+        setLocationLoading(false);
+      }
+    };
+
+    loadDonation();
+  }, [donationId, isEditMode]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -43,9 +78,9 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
           <ThemedText style={styles.headerBackIcon}>←</ThemedText>
         </TouchableOpacity>
       ),
-      headerTitle: 'Bağış Ekle',
+      headerTitle: isEditMode ? 'Bağışı Güncelle' : 'Bağış Ekle',
     });
-  }, [navigation, router]);
+  }, [isEditMode, navigation, router]);
 
   const requestLocation = async () => {
     setLocationLoading(true);
@@ -93,38 +128,51 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
 
     setLoading(true);
     try {
-      await createDonation({
+      const payload = {
         title: title.trim(),
         description: description.trim(),
         category,
         quantity: quantity.trim() || undefined,
-        expiration_date: expirationDate.trim() || undefined,
-        latitude: location!.latitude,
-        longitude: location!.longitude,
-      });
+      };
 
-      Alert.alert('✅ Başarılı', 'Bağışınız başarıyla eklendi!');
-      setTitle('');
-      setDescription('');
-      // Varsayılan kategoriyi backend'in kabul ettiği değere sıfırla
-      setCategory('temiz yemek');
-      setQuantity('');
-      setExpirationDate('');
-      setError(null);
-      onSuccess?.();
+      if (isEditMode && donationId) {
+        await updateDonation(Number(donationId), payload);
+        Alert.alert('✅ Güncellendi', 'Bağış kaydı güncellendi.');
+        onSuccess?.();
+        router.back();
+      } else {
+        await createDonation({
+          ...payload,
+          expiration_date: expirationDate.trim() || undefined,
+          latitude: location!.latitude,
+          longitude: location!.longitude,
+        });
+
+        Alert.alert('✅ Başarılı', 'Bağışınız başarıyla eklendi!');
+        setTitle('');
+        setDescription('');
+        // Varsayılan kategoriyi backend'in kabul ettiği değere sıfırla
+        setCategory('temiz yemek');
+        setQuantity('');
+        setExpirationDate('');
+        setError(null);
+        onSuccess?.();
+      }
     } catch (error) {
-      setError('Bağış eklenirken hata oluştu.');
+      setError(isEditMode ? 'Bağış güncellenirken hata oluştu.' : 'Bağış eklenirken hata oluştu.');
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (locationLoading) {
+  if (locationLoading || prefillLoading) {
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color="#4CAF50" />
-        <ThemedText style={styles.loadingText}>Konum alınıyor...</ThemedText>
+        <ThemedText style={styles.loadingText}>
+          {prefillLoading ? 'Bağış bilgileri yükleniyor...' : 'Konum alınıyor...'}
+        </ThemedText>
       </ThemedView>
     );
   }
@@ -239,7 +287,13 @@ export default function AddDonationScreen({ onSuccess }: { onSuccess?: () => voi
         </View>
 
         <PrimaryButton
-          title={loading ? '⏳ Kaydediliyor...' : '✅ Kaydet'}
+          title={
+            loading
+              ? '⏳ Kaydediliyor...'
+              : isEditMode
+              ? '💾 Güncelle'
+              : '✅ Kaydet'
+          }
           onPress={handleSubmit}
           disabled={loading}
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}

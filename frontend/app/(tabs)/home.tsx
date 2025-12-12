@@ -3,11 +3,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useAuth } from '@/contexts/auth-context';
-import { cancelReservation, getDonations, getDonationsByLocation, reserveDonation } from '@/services/api-service';
+import { cancelReservation, deleteDonation, getDonations, getDonationsByLocation, reserveDonation } from '@/services/api-service';
 import { getAuthToken } from '@/services/auth-service';
 import { calculateDistance, getCurrentLocation, LocationCoords } from '@/utils/location-service';
-import { useNavigation, useRouter } from 'expo-router';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,14 @@ export default function HomeScreen() {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userLocation) {
+        loadDonations(userLocation);
+      }
+    }, [userLocation])
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -174,6 +182,35 @@ export default function HomeScreen() {
     }
   };
 
+  const handleEdit = (donationId: number) => {
+    router.push({
+      pathname: '/(tabs)/add-donation',
+      params: { donationId: donationId.toString() },
+    });
+  };
+
+  const handleDelete = (donationId: number) => {
+    Alert.alert('Bağışı Sil', 'Bu bağışı kalıcı olarak silmek istediğinize emin misiniz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          setActioningId(donationId);
+          try {
+            await deleteDonation(donationId);
+            await loadDonations(userLocation || undefined);
+            Alert.alert(' Silindi', 'Bağış başarıyla silindi.');
+          } catch (err: any) {
+            Alert.alert('Hata', err?.response?.data?.detail?.message || 'Bağış silinemedi');
+          } finally {
+            setActioningId(null);
+          }
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -288,11 +325,11 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {donations.length === 0 ? (
+          {displayedDonations.length === 0 ? (
             <View style={styles.emptyContainer}>
               <ThemedText style={styles.emptyText}>📭</ThemedText>
               <ThemedText style={styles.emptySubText}>
-                Henüz bağış bulunmamaktadır
+                Bu filtrede henüz bağış bulunmamaktadır
               </ThemedText>
             </View>
           ) : (
@@ -306,6 +343,25 @@ export default function HomeScreen() {
                     donation={item}
                     onPress={handleDonationPress}
                   />
+
+                  {user?.user_type === 'donor' && (
+                    <View style={styles.ownerActionRow}>
+                      <PrimaryButton
+                        title=" Düzenle"
+                        onPress={() => handleEdit(item.id)}
+                        style={styles.editBtn}
+                        textStyle={styles.editBtnText}
+                        disabled={actioningId === item.id}
+                      />
+                      <PrimaryButton
+                        title=" Sil"
+                        onPress={() => handleDelete(item.id)}
+                        style={styles.deleteBtn}
+                        textStyle={styles.deleteBtnText}
+                        disabled={actioningId === item.id}
+                      />
+                    </View>
+                  )}
 
                   {user?.user_type !== 'donor' && (
                     <View style={styles.actionRow}>
@@ -333,9 +389,7 @@ export default function HomeScreen() {
                         <ThemedText style={styles.reservedBadge}>Rezerve edildi</ThemedText>
                       )}
 
-                      {item.is_collected && (
-                        <ThemedText style={styles.collectedBadge}>Teslim alınmış</ThemedText>
-                      )}
+                      {/* Teslim alma özelliği kaldırıldı */}
                     </View>
                   )}
                 </View>
@@ -427,6 +481,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 8,
   },
+  ownerActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 6,
+    backgroundColor: '#eef7ff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#c5e1ff',
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -446,16 +514,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#2e7d32',
     minWidth: 140,
   },
+  editBtn: {
+    backgroundColor: '#1976d2',
+    minWidth: 120,
+  },
   cancelBtn: {
     backgroundColor: '#f57c00',
     minWidth: 160,
+  },
+  deleteBtn: {
+    backgroundColor: '#c62828',
+    minWidth: 120,
   },
   reserveBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
   },
+  editBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
   cancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  deleteBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
